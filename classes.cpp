@@ -48,16 +48,15 @@ public:
 	}
 
 	float find_adp() {
-		int size = roster.size() - 1;
+		int size = this->roster.size() - 1;
 		float total = 0.0;
-		for (auto& player : roster) {
-			player.adp += total;
+		for (auto& player : this->roster) {
+			 player.adp += total;
 		}
-		if (size) total / -size; 
+		if (size) total /= size; 
 		else {
-			return 0.0f; 
+			return 999.99f; 
 		}
-	
 		return total;
 	}
 };

@@ -58,29 +58,29 @@ int main() {
 
 	for (const auto& userTeam : leagueUsers) { // get the team info this doesn't contain roster
 		/*std::cout << userTeam["metadata"]["team_name"]; 
-		std::cout << userTeam["user_id"];*/ 
+		std::cout << userTeam["user_id"];*/
 		Team team("test", userTeam["user_id"]);
-		std::cout << "I made the first team object \n"; 
 		for (const auto& roster : leagueTeams) { // get the roster
-			std::cout << " I got the roster from league teams \n"; 
-			for (const auto& player : roster["starters"]) { // each starter in the roster 
-				//declare stuff we will need to assemble player 
-				std::cout << "I got the player from the roster \n"; 
-				float adp = 0.0f; 
-				const auto& currentPlayer = allPlayerData[player.get<std::string>()];
-				std::string currentName = currentPlayer["first_name"].get<std::string>() + " " + currentPlayer["last_name"].get<std::string>();
-				//std::cout << currentPlayer["position"].get<std::string>() << " " << currentName;
-			
-				for (const auto& player : allADP["players"]) { // loop to find players in my other dataset via name 
-					if (player["name"] == (currentPlayer["first_name"].get<std::string>() + " " + currentPlayer["last_name"].get<std::string>())) {
-						std::cout << " " << "ADP : " << player["adp"] << "\n";
-						adp = player["adp"]; 
+			if (roster["owner_id"] == userTeam["user_id"]) {
+				for (const auto& player : roster["starters"]) { // each starter in the roster 
+					//declare stuff we will need to assemble player 
+					std::cout << "I got the player from the roster \n";
+					float adp = 0.0f;
+					const auto& currentPlayer = allPlayerData[player.get<std::string>()];
+					std::string currentName = currentPlayer["first_name"].get<std::string>() + " " + currentPlayer["last_name"].get<std::string>();
+					//std::cout << currentPlayer["position"].get<std::string>() << " " << currentName;
+
+					for (const auto& player : allADP["players"]) { // loop to find players in my other dataset via name 
+						if (player["name"] == (currentPlayer["first_name"].get<std::string>() + " " + currentPlayer["last_name"].get<std::string>())) {
+							std::cout << " " << "ADP : " << player["adp"] << "\n";
+							adp = player["adp"];
+						}
 					}
+					Player player(currentName, adp);
+					team.roster.push_back(player);
 				}
-				Player player(currentName, adp); 
-				team.roster.push_back(player); 
 			}
-			break;
+			
 		}
 		teams.push_back(team); 
 	}
