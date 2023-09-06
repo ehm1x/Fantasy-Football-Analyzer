@@ -18,7 +18,7 @@ nlohmann::json load(const std::string& url) {
 int main() {
 
 	curlpp::Cleanup myCleanup; // init curlpp
-
+	Team team("gg", "gg");
 	std::string username;
 	std::cout << "Enter your username \n";
 	std::cin >> username;
@@ -50,21 +50,23 @@ int main() {
 	//std::string league_id = leaguesData[leagueNum - 1]["league_id"];
 	auto leagueUsers = load("https://api.sleeper.app/v1/league/" + leagueId + "/users");
 	auto leagueTeams = load("https://api.sleeper.app/v1/league/" + leagueId + "/rosters");
-
+	
 	std::cout << "I loaded leaguesusers and league teams \n";
 
 	std::vector<Team> teams; 
 	std::cout << "I made the teams vector \n";
 
 	for (const auto& userTeam : leagueUsers) { // get the team info this doesn't contain roster
-		Team team(userTeam["metadata"]["team_name"].get<std::string>(), userTeam["user+id"].get<std::string>());
+		/*std::cout << userTeam["metadata"]["team_name"]; 
+		std::cout << userTeam["user_id"];*/ 
+		Team team("test", userTeam["user_id"]);
 		std::cout << "I made the first team object \n"; 
 		for (const auto& roster : leagueTeams) { // get the roster
 			std::cout << " I got the roster from league teams \n"; 
 			for (const auto& player : roster["starters"]) { // each starter in the roster 
 				//declare stuff we will need to assemble player 
 				std::cout << "I got the player from the roster \n"; 
-				float adp; 
+				float adp = 0.0f; 
 				const auto& currentPlayer = allPlayerData[player.get<std::string>()];
 				std::string currentName = currentPlayer["first_name"].get<std::string>() + " " + currentPlayer["last_name"].get<std::string>();
 				//std::cout << currentPlayer["position"].get<std::string>() << " " << currentName;
@@ -89,7 +91,7 @@ int main() {
 			std::cout << player.name << " " << player.adp << "\n"; 
 		}
 		std::cout << "AVERAGE TEAM ADP: " << team.find_adp(); 
-		std::cout << "\n"; 
+		std::cout << "\n\n"; 
 	}
 	
 
