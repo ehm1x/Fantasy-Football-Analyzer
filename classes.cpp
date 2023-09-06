@@ -51,7 +51,8 @@ public:
 		int size = this->roster.size() - 1;
 		float total = 0.0;
 		for (auto& player : this->roster) {
-			 player.adp += total;
+			if (!player.adp) size--; 
+			 total += player.adp;
 		}
 		if (size) total /= size; 
 		else {
