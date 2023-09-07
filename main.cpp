@@ -165,8 +165,13 @@ int main() {
 
 		std::cout << "\nAVERAGE TEAM ADP: " << std::fixed << std::setprecision(2) << team.find_adp() << "\n";
 		std::cout << "AVERAGE PTS PER WEEK: " << std::fixed << std::setprecision(2) << team.avgWeekly() << "\n";
-		std::cout << "TOTAL POINTS PROJECTED: " << std::fixed << std::setprecision(2) << team.totalPts << "\n\n";
+		std::cout << "TOTAL POINTS PROJECTED: " << std::fixed << std::setprecision(2) << team.calcTotalPts() << "\n\n";
 	}
+
+	for (auto& curPlayer : teams[0].roster) {
+		curPlayer.printWeekly(); 
+	}
+
 	
 
 	return 0;

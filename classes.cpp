@@ -42,6 +42,15 @@ public:
 		position = "Undef";
 	}
 
+	void printWeekly() {
+		int i = 1; 
+		std::cout << this->name << "\n"; 
+		for (float x : this->weeklyProj) {
+			std::cout << i << ".  " << x << "\n";
+			i++; 
+		}
+	}
+
 };
 
 
