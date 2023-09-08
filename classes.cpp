@@ -22,14 +22,16 @@ public:
 	float projTotal = 0;
 	std::string position = "undef";
 	float avgProj = 0; 
+	float tradeValue; 
 
-	Player(std::string pname, const float adp1, const float projTotal1, std::string position1, std::vector<float> pointsProj) {
+	Player(std::string pname, const float adp1, const float projTotal1, std::string position1, std::vector<float> pointsProj, const float trade) {
 		name = pname;
 		adp = adp1;
 		projTotal = projTotal1;
 		position = position1; 
 		weeklyProj = pointsProj;
 		avgProj = projTotal1 / 17; 
+		tradeValue = trade; 
 	}
 	Player(std::string pname, const float adp1) {
 		name = pname;
@@ -100,6 +102,14 @@ public:
 			avgWeek += player.avgProj;
 		}
 		return avgWeek; 
+	}
+
+	float calcTotalTrade() {
+		float total = 0.0; 
+		for (const auto& player : this->roster) {
+			total += player.tradeValue;
+		}
+		return total; 
 	}
 };
 
