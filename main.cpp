@@ -20,13 +20,22 @@ int main() {
 	auto userId = userData["user_id"].get<std::string>();
 	auto leaguesData = load("https://api.sleeper.app/v1/user/" + userId + "/leagues/nfl/2023");
 	auto tradeValueTable = load("https://statics.sportskeeda.com/skm/assets/trade-analyzer/players-json-list/v2/playersLists.json");
-	tradeValueTable = tradeValueTable["playersListsCollections"][5]["playersList"];
-	std::unordered_map<std::string, Player*> playerMap; 
+	int leagueType = -1; 
+	for (int i = 0; i <= 11; i++) { 
+		if (tradeValueTable["playersListsCollections"][i]["sheetName"] == "redraft___1qb_ppr") {
+			leagueType = i;
+			std::cout << "[SUCCESS] Found league type. \n";
+		}
+	}
+	if (leagueType == -1) std::cout << "[ERROR] Could not find league type please restart. \n"; 
+	tradeValueTable = tradeValueTable["playersListsCollections"][leagueType]["playersList"];
+	const std::vector<std::vector<int>> positionalScarcityAll = { {3, 7, 11, 10, 10}, {4, 9, 17, 27, 39}, {4, 9, 15, 21, 31}, {1, 3, 7, 13, 12} };
+	std::unordered_map<std::string, Player*> playerMap;
 	std::unordered_map<std::string, int> tradeMap;
 	for (int i = 1; i < tradeValueTable.size(); i++) {
 		const auto& item = tradeValueTable[i];
 		if (item.is_array() && item.size() > 0) {
-			tradeMap[item[0]] = i; 
+			tradeMap[item[0]] = i;
 		}
 	}
 
@@ -38,8 +47,6 @@ int main() {
 		leagueNum++;
 	}
 
-	//now we can load users now that we know said league 
-
 	std::cout << "Choose league by number\n";
 	std::cin >> leagueNum;
 	system("cls");
@@ -48,40 +55,7 @@ int main() {
 
 	auto leagueUsers = load("https://api.sleeper.app/v1/league/" + leagueId + "/users");
 	auto leagueTeams = load("https://api.sleeper.app/v1/league/" + leagueId + "/rosters");
-	std::vector<Team> teams;
-	for (const auto& userTeam : leagueUsers) { // get the team info this doesn't contain roster
-		Team team(userTeam["display_name"], userTeam["user_id"]);
-		for (const auto& roster : leagueTeams) { // get the roster
-			if (roster["owner_id"] == userTeam["user_id"]) {
-				for (const auto& player : roster["players"]) { // each starter in the roster 
-					//declare stuff we will need to assemble player 
-
-					const auto& currentPlayer = allPlayerData[player.get<std::string>()];
-					std::string currentName = currentPlayer["first_name"].get<std::string>() + " " + currentPlayer["last_name"].get<std::string>();
-					auto weeklyProj = load("https://api.sleeper.com/projections/nfl/player/" + currentPlayer["player_id"].get<std::string>() + "?season_type=regular&season=2023&grouping=week");
-					auto seasonProj = load("https://api.sleeper.com/projections/nfl/player/" + currentPlayer["player_id"].get<std::string>() + "?season_type=regular&season=2023&grouping=season");
-					std::vector<float>  projpts(19);
-					for (const auto& week : weeklyProj) {
-						if (week.is_object()) {
-							int weekNum = week["week"].get<int>();
-							projpts[weekNum] = week["stats"]["pts_ppr"].get<float>();
-						}
-					}
-					float adp = seasonProj["stats"]["adp_ppr"].get<float>();
-					float seasonTotal = seasonProj["stats"]["pts_ppr"].get<float>();
-					std::string position = seasonProj["player"]["fantasy_positions"][0];
-					std::string tradeIndex = tradeValueTable[tradeMap[currentName]][6];
-					float tradeValue = std::stof(tradeIndex);
-					Player player(currentName, adp, seasonTotal, position, projpts, tradeValue);
-					team.roster.push_back(player);
-					playerMap[currentName] = &player;
-				}
-			}
-
-		}
-		teams.push_back(team);
-		std::cout << "[LOADED] team " << team.teamName << " has been loaded. \n";
-	}
+	std::vector<Team> teams = constructTeams(leagueUsers, leagueTeams, allPlayerData, tradeValueTable, &tradeMap, &playerMap);
 
 	std::map<float, Player*> qbMap;
 	std::map<float, Player*> wrMap;
@@ -89,8 +63,8 @@ int main() {
 	std::map<float, Player*> teMap;
 
 	for (const auto& pair : playerMap) {
-		auto player = pair.second; 
-		if (player->position == "QB"){
+		auto player = pair.second;
+		if (player->position == "QB") {
 			qbMap[player->tradeValue] = player;
 		}
 		else if (player->position == "WR") {
@@ -100,63 +74,35 @@ int main() {
 			rbMap[player->tradeValue] = player;
 		}
 		else if (player->position == "TE") {
-			teMap[player->tradeValue] = player; 
+			teMap[player->tradeValue] = player;
 		}
 	}
-
-
 
 	HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
-	for (auto& team : teams) {
-		std::cout << "============================================================================================\n";
-		std::cout << "Team: " << team.teamName << "\n\n";
-		std::cout << std::left << std::setw(10) << "Position" << std::setw(22) << "Name" << std::setw(10) << "ADP" << std::setw(15) << "Season Total" << std::setw(20) << "Avg PTS per Week" << std::setw(10) << "Trade Value:\n";
-		std::sort(team.roster.begin(), team.roster.end(), [](const Player& a, const Player& b) {
-			return a.position < b.position;
-			});
+	
 
-		for (const auto& player : team.roster) {
-			int color = DEFAULT;
-
-			if (player.tradeValue < 9.0) {
-				color = RED;
-			}
-			else if (player.tradeValue >= 10.0 && player.tradeValue < 25.0) {
-				color = GREEN;
-			}
-			else if (player.tradeValue >= 25.0 && player.tradeValue < 50.0) {
-				color = BLUE;
-			}
-			else if (player.tradeValue >= 50.0 && player.tradeValue < 75.0) {
-				color = PURPLE;
-			}
-			else if (player.tradeValue >= 75.0) {
-				color = YELLOW;
-			}
-
-			SetConsoleTextAttribute(hConsole, color); // Set the text color
-
-			// Print player information
-			std::cout << std::left << std::setw(10) << player.position << std::setw(22) << player.name << std::setw(10) << player.adp << std::setw(15) << player.projTotal << std::setw(20) << player.avgProj << std::setw(10) << player.tradeValue << "\n";
-
-			// Reset text color to default
-			SetConsoleTextAttribute(hConsole, DEFAULT);
+	while (true) {
+		int input;
+		std::cout << "\n\n\nPRESS ENTER TO EXIT\n";
+		std::cout << "PRESS 1 FOR RANKINGS \n";
+		std::cout << "PRESS 2 FOR ALL TEAMS \n";
+		std::cout << "PRESS 3 FOR ANALYZER\n"; 
+		std::cout << "PRESS 4 FOR REAL ANALYZER\n";
+		std::cin >> input;
+		switch (input) {
+		case 1: rankings(qbMap, wrMap, rbMap, teMap, hConsole, positionalScarcityAll);
+			break;
+		case 2: printTeams(teams, hConsole);
+			break;
+		case 3: tradeAnalyzer(playerMap, tradeMap, tradeValueTable, hConsole);
+			break;
+		case 4: realTradeAnalyzer(teams, userId, hConsole);
+			break; 
+		default: break;
 		}
-
-
-		std::cout << "\nAVERAGE TEAM ADP: " << std::fixed << std::setprecision(2) << team.find_adp() << "\n";
-		std::cout << "AVERAGE PTS PER WEEK: " << std::fixed << std::setprecision(2) << team.avgWeekly() << "\n";
-		std::cout << "TOTAL POINTS PROJECTED: " << std::fixed << std::setprecision(2) << team.calcTotalPts() << "\n";
-		std::cout << "TOTAL TRADE VALUE OF TEAM: " << std::fixed << std::setprecision(2) << team.calcTotalTrade() << "\n\n";
 	}
 
 
-	for (auto it = qbMap.rbegin(); it != qbMap.rend(); ++it) {
-		float tradeValue = it->first;
-		Player* player = it->second;
-		std::cout << "QB RANKINGS: \N";
-		std::cout << std::setw(20) << player->name << std::setw(5) << tradeValue << "\n"; 
-	}
 	return 0;
 }
 
