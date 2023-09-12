@@ -16,7 +16,7 @@ void printAsciiArt() {
 std::time_t getFileLastModifiedTime(const std::string& filePath) {
 	std::filesystem::path path(filePath);
 	if (!std::filesystem::exists(path)) {
-		return 0; 
+		return 0;
 	}
 	const auto fileTime = std::filesystem::last_write_time(filePath);
 	const auto systemTime = std::chrono::clock_cast<std::chrono::system_clock>(fileTime);
@@ -141,7 +141,7 @@ void realTradeAnalyzer(std::vector<Team>& teams, std::string& userId, HANDLE& hC
 			std::cout << "YOUR TEAM \n";
 			for (int i = 0; i < team.roster.size(); i++) {
 				Player* player = team.roster[i];
-				std::cout << i + 1 << ". " << player->name << " " << "TRADE VALUE: " << player->tradeValue << "\n";
+				std::cout << std::left << std:: setw(2) << i + 1 << ". " << std::setw(15) << player->name << " " << std::setw(13)<<  "TRADE VALUE: " << std::setw(4) << player->tradeValue << "\n";
 			}
 
 			int selection;
@@ -166,7 +166,7 @@ void realTradeAnalyzer(std::vector<Team>& teams, std::string& userId, HANDLE& hC
 	auto tradePartner = teams[partnerIndex - 1];
 	for (int i = 0; i < tradePartner.roster.size(); i++) {
 		Player* player = tradePartner.roster[i];
-		std::cout << i+1 << ". " << player->name << " " << "TRADE VALUE: " << player->tradeValue << "\n";
+		std::cout << std::left << std::setw(2) << i + 1 << ". " << std::setw(15) << player->name << " " << std::setw(13) << "TRADE VALUE: " << std::setw(4) << player->tradeValue << "\n";
 	}
 	int selection;
 	do {
@@ -175,7 +175,7 @@ void realTradeAnalyzer(std::vector<Team>& teams, std::string& userId, HANDLE& hC
 		if (selection == 0) break;
 		team2.push_back(tradePartner.roster[selection - 1]);
 		std::cout << "\nSuccessfully added " << tradePartner.roster[selection - 1]->name << "\n";
-	} while (selection != 0); 
+	} while (selection != 0);
 
 	float team1Trade = 0;
 	float team1ppw = 0;
@@ -230,7 +230,7 @@ void displayTeamStats(const std::vector<Player*>& team, const std::string& teamN
 	std::cout << "\n\n";
 }
 
-std::vector<Team> constructTeams(nlohmann::json& leagueUsers, nlohmann::json& leagueTeams, nlohmann::json& allPlayerData, nlohmann::json& tradeValueTable, std::unordered_map<std::string, int>* tradeMap, std::unordered_map<std::string, Player*>* playerMap) {
+std::vector<Team> constructTeams(nlohmann::json& leagueUsers, nlohmann::json& leagueTeams, nlohmann::json& allPlayerData, nlohmann::json& tradeValueTable, std::unordered_map<std::string, int>& tradeMap, std::unordered_map<std::string, Player*>* playerMap, int wait) {
 	std::vector<Team> teams;
 	for (const auto& userTeam : leagueUsers) {
 		Team team(userTeam["display_name"], userTeam["user_id"]);
@@ -245,7 +245,7 @@ std::vector<Team> constructTeams(nlohmann::json& leagueUsers, nlohmann::json& le
 
 					const auto& currentPlayer = allPlayerData[player.get<std::string>()];
 					std::string currentName = currentPlayer["first_name"].get<std::string>() + " " + currentPlayer["last_name"].get<std::string>();
-					auto weeklyProj = load("https://api.sleeper.com/projections/nfl/player/" + currentPlayer["player_id"].get<std::string>() + "?season_type=regular&season=2023&grouping=week");
+					auto weeklyProj = loadLarge("https://api.sleeper.com/projections/nfl/player/" + currentPlayer["player_id"].get<std::string>() + "?season_type=regular&season=2023&grouping=week", "C:\\\\FantasyFolder\\playerData\\"+ currentPlayer["player_id"].get<std::string>() + "weekly.json", wait);
 					auto seasonProj = load("https://api.sleeper.com/projections/nfl/player/" + currentPlayer["player_id"].get<std::string>() + "?season_type=regular&season=2023&grouping=season");
 					std::vector<float> projpts(19);
 					for (const auto& week : weeklyProj) {
@@ -255,9 +255,13 @@ std::vector<Team> constructTeams(nlohmann::json& leagueUsers, nlohmann::json& le
 						}
 					}
 					float adp = seasonProj["stats"]["adp_ppr"].get<float>();
-					float seasonTotal = seasonProj["stats"]["pts_ppr"].get<float>();
+					float seasonTotal = 0; 
+					if (seasonProj["stats"].contains("pts_ppr")) {
+						seasonTotal = seasonProj["stats"]["pts_ppr"].get<float>();
+					}
 					std::string position = seasonProj["player"]["fantasy_positions"][0];
-					std::string tradeFloat = tradeValueTable[(*tradeMap)[currentName]][6];
+					int tradeIndex = tradeMap[currentName];
+					std::string tradeFloat = tradeValueTable[tradeIndex][6];
 					float tradeValue = std::stof(tradeFloat);
 					Player* player = new Player(currentName, adp, seasonTotal, position, projpts, tradeValue);
 					team.roster.push_back(player);
@@ -272,8 +276,6 @@ std::vector<Team> constructTeams(nlohmann::json& leagueUsers, nlohmann::json& le
 	}
 	return teams;
 }
-
-
 
 void rankings(std::map<float, Player*>& qbMap, std::map<float, Player*>& wrMap, std::map<float, Player*>& rbMap, std::map<float, Player*>& teMap, HANDLE& hConsole, const std::vector<std::vector<int>>& positionalScarcityAll) {
 	std::cout << "Choose a number in the calculator \n";
@@ -429,4 +431,157 @@ nlohmann::json load(const std::string& url) {
 		std::cerr << "Error loading data: " << e.what() << std::endl;
 		exit(1);
 	}
+}
+
+void setConsoleColor(HANDLE hConsole, int color) {
+	SetConsoleTextAttribute(hConsole, color);
+}
+
+void resetConsoleColor(HANDLE hConsole) {
+	SetConsoleTextAttribute(hConsole, DEFAULT);
+}
+
+void teamRankings(std::vector<Team>& teams, HANDLE hConsole) {
+	std::unordered_map<float, std::string> leagueTrade;
+	std::unordered_map<float, std::string> leaguePoints;
+
+	for (auto& roster : teams) {
+		leagueTrade[roster.calcTotalTrade()] = roster.teamName;
+		leaguePoints[roster.calcTotalPts()] = roster.teamName;
+	}
+
+	std::map<float, std::string> sortedTrade(leagueTrade.begin(), leagueTrade.end());
+	std::map<float, std::string> sortedPoints(leaguePoints.begin(), leaguePoints.end());
+
+	int rank = 1;
+	for (const auto& pair : sortedTrade) {
+		int color = DEFAULT; // Default color
+		if (rank == 1) {
+			color = YELLOW; // Redefine the meaning of GOLD based on your color codes
+		}
+		else if (rank == 2 || rank == 3) {
+			color = PURPLE;
+		}
+		else if (rank >= 4 && rank <= 7) {
+			color = BLUE;
+		}
+		else if (rank >= 8 && rank <= 10) {
+			color = GREEN;
+		}
+		else if (rank >= 11 && rank <= 12) {
+			color = RED;
+		}
+
+		setConsoleColor(hConsole, color); // Set the text color using the provided console handle
+		std::cout << std::setw(10) << std::left << pair.second << ": " << std::setw(8) << std::right << pair.first << std::endl;
+		resetConsoleColor(hConsole); // Reset the text color using the provided console handle
+		rank++;
+	}
+
+	rank = 1;
+	for (const auto& pair : sortedPoints) {
+		int color = DEFAULT; // Default color
+		if (rank == 1) {
+			color = YELLOW; // Redefine the meaning of GOLD based on your color codes
+		}
+		else if (rank == 2 || rank == 3) {
+			color = PURPLE;
+		}
+		else if (rank >= 4 && rank <= 7) {
+			color = BLUE;
+		}
+		else if (rank >= 8 && rank <= 10) {
+			color = GREEN;
+		}
+		else if (rank >= 11 && rank <= 12) {
+			color = RED;
+		}
+
+		setConsoleColor(hConsole, color); // Set the text color using the provided console handle
+		std::cout << std::setw(10) << std::left << pair.second << ": " << std::setw(8) << std::right << pair.first << std::endl;
+		resetConsoleColor(hConsole); // Reset the text color using the provided console handle
+		rank++;
+	}
+}
+
+void reloadTeams(std::vector<Team>& teams, std::map<float, Player*>& qbMap, std::map<float, Player*>& wrMap, std::map<float, Player*>& rbMap, std::map<float, Player*>& teMap, std::unordered_map<std::string, Player*>& playerMap,
+	nlohmann::json& leagueUsers, nlohmann::json& leagueTeams, nlohmann::json& allPlayerData, nlohmann::json& tradeValueTable, std::unordered_map<std::string, int>* tradeMap, int wait) {
+
+	for (auto& team : teams) {
+		team.destroyPlayers();
+	}
+	teams.clear();
+	teams.shrink_to_fit();
+	qbMap.clear();
+	wrMap.clear();
+	rbMap.clear();
+	teMap.clear();
+	playerMap.clear();
+	tradeValueTable.clear();
+	tradeValueTable = load("https://statics.sportskeeda.com/skm/assets/trade-analyzer/players-json-list/v2/playersLists.json");
+	findLeagueType(tradeValueTable);
+	teams = constructTeams(leagueUsers, leagueTeams, allPlayerData, tradeValueTable, *tradeMap, &playerMap, wait);
+	mapInit(qbMap, wrMap, rbMap, teMap, playerMap);
+}
+
+void mapInit(std::map<float, Player*>& qbMap, std::map<float, Player*>& wrMap, std::map<float, Player*>& rbMap, std::map<float, Player*>& teMap, std::unordered_map<std::string, Player*>& playerMap) {
+	for (const auto& pair : playerMap) {
+		auto player = pair.second;
+		if (player->position == "QB") {
+			qbMap[player->tradeValue] = player;
+		}
+		else if (player->position == "WR") {
+			wrMap[player->tradeValue] = player;
+		}
+		else if (player->position == "RB") {
+			rbMap[player->tradeValue] = player;
+		}
+		else if (player->position == "TE") {
+			teMap[player->tradeValue] = player;
+		}
+	}
+}
+
+nlohmann::json findLeagueType(nlohmann::json& tradeValueTable) {
+	int leagueType = -1;
+	for (int i = 0; i <= 11; i++) {
+		if (tradeValueTable["playersListsCollections"][i]["sheetName"] == "redraft___1qb_ppr") {
+			leagueType = i;
+			std::cout << "[SUCCESS] Found league type. \n";
+		}
+	}
+	tradeValueTable = tradeValueTable["playersListsCollections"][leagueType]["playersList"];
+	return tradeValueTable; 
+}
+
+void loadTradeMap(nlohmann::json& tradeValueTable, std::unordered_map<std::string, int>& tradeMap) {
+	for (int i = 1; i < tradeValueTable.size(); i++) {
+		const auto& item = tradeValueTable[i];
+		if (item.is_array() && item.size() > 0) {
+			tradeMap[item[0]] = i;
+		}
+	}
+}
+
+int leagueSelection(nlohmann::json& leaguesData) {
+	int leagueNum = 1;
+	for (const auto& league : leaguesData) {
+
+		std::cout << leagueNum << ". " << league["name"].get<std::string>() << "\n";
+		leagueNum++;
+	}
+	std::cout << "Choose league by number\n";
+	std::cin >> leagueNum;
+	system("cls");
+	std::cout << "Loading teams from league " << leaguesData[leagueNum - 1]["name"].get<std::string>() << "\n\n";
+	return leagueNum; 
+}
+
+std::string getUsername() {
+	std::string username; 
+	std::cout << "Enter your username \n";
+	std::cin >> username;
+	system("cls");
+	std::cout << "Loading all leagues for user " << username << "\n";
+	return username; 
 }

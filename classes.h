@@ -113,4 +113,11 @@ public:
 		}
 		return total;
 	}
+	void destroyPlayers() {
+		for (Player* player : roster) {
+			delete player; 
+		}
+		roster.clear(); 
+		roster.shrink_to_fit(); 
+	}
 };
