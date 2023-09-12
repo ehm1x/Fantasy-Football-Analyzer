@@ -1,5 +1,6 @@
-﻿#include "classes.cpp"
-#include "declare.h"
+﻿
+#include "helpers.h"
+#include "classes.h"
 
 int main() {
 
@@ -20,14 +21,14 @@ int main() {
 	auto userId = userData["user_id"].get<std::string>();
 	auto leaguesData = load("https://api.sleeper.app/v1/user/" + userId + "/leagues/nfl/2023");
 	auto tradeValueTable = load("https://statics.sportskeeda.com/skm/assets/trade-analyzer/players-json-list/v2/playersLists.json");
-	int leagueType = -1; 
-	for (int i = 0; i <= 11; i++) { 
+	int leagueType = -1;
+	for (int i = 0; i <= 11; i++) {
 		if (tradeValueTable["playersListsCollections"][i]["sheetName"] == "redraft___1qb_ppr") {
 			leagueType = i;
 			std::cout << "[SUCCESS] Found league type. \n";
 		}
 	}
-	if (leagueType == -1) std::cout << "[ERROR] Could not find league type please restart. \n"; 
+	if (leagueType == -1) std::cout << "[ERROR] Could not find league type please restart. \n";
 	tradeValueTable = tradeValueTable["playersListsCollections"][leagueType]["playersList"];
 	const std::vector<std::vector<int>> positionalScarcityAll = { {3, 7, 11, 10, 10}, {4, 9, 17, 27, 39}, {4, 9, 15, 21, 31}, {1, 3, 7, 13, 12} };
 	std::unordered_map<std::string, Player*> playerMap;
@@ -79,14 +80,14 @@ int main() {
 	}
 
 	HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
-	
+
 
 	while (true) {
 		int input;
 		std::cout << "\n\n\nPRESS ENTER TO EXIT\n";
 		std::cout << "PRESS 1 FOR RANKINGS \n";
 		std::cout << "PRESS 2 FOR ALL TEAMS \n";
-		std::cout << "PRESS 3 FOR ANALYZER\n"; 
+		std::cout << "PRESS 3 FOR ANALYZER\n";
 		std::cout << "PRESS 4 FOR REAL ANALYZER\n";
 		std::cin >> input;
 		switch (input) {
@@ -97,7 +98,7 @@ int main() {
 		case 3: tradeAnalyzer(playerMap, tradeMap, tradeValueTable, hConsole);
 			break;
 		case 4: realTradeAnalyzer(teams, userId, hConsole);
-			break; 
+			break;
 		default: break;
 		}
 	}
@@ -105,4 +106,3 @@ int main() {
 
 	return 0;
 }
-
