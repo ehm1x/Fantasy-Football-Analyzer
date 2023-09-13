@@ -5,13 +5,13 @@
 #include <sstream>
 
 
-const int RED = 12;
-const int GREEN = 10;
-const int BLUE = 9;
-const int PURPLE = 13;
-const int YELLOW = 14;
-const int DEFAULT = 7;
-const int DARK_YELLOW = 15;
+static const int RED = 12;
+static const int GREEN = 10;
+static const int BLUE = 9;
+static const int PURPLE = 13;
+static const int YELLOW = 14;
+static const int DEFAULT = 7;
+static const int DARK_YELLOW = 15;
 
 
 class Player {
@@ -20,11 +20,14 @@ public:
 	std::string name;
 	float adp;
 	std::vector<float> weeklyProj = {};
+	std::vector<float> weeklyActualPts = {}; 
 	float projTotal = 0;
 	std::string position = "undef";
 	float avgProj = 0;
 	float tradeValue;;
-	int posotionalRanking = 0;
+	int positionalRanking = 0;
+	int colorByTradeValue = DEFAULT;
+	int colorByPosition = DEFAULT; 
 
 	Player(std::string pname, const float adp1, const float projTotal1, std::string position1, std::vector<float> pointsProj, const float trade) {
 		name = pname;
@@ -54,17 +57,18 @@ public:
 			i++;
 		}
 	}
-
 };
 
 
 class Team {
 public:
 	std::string teamName;
-	const float avgADP = 0;
+	float avgADP = 0;
 	float totalPts = 0;
+	float totalWeekly = 0.0; 
 	std::vector<Player*> roster = {};
 	std::string owner_id;
+	float totalTradeValue = 0.0; 
 
 	Team(std::string tName, std::string owner) {
 		teamName = tName;
@@ -95,6 +99,7 @@ public:
 		for (const auto& player : this->roster) {
 			total += player->projTotal;
 		}
+		this->totalPts = total;
 		return total;
 	}
 
@@ -103,6 +108,7 @@ public:
 		for (const auto& player : this->roster) {
 			avgWeek += player->avgProj;
 		}
+		this->totalWeekly = avgWeek;
 		return avgWeek;
 	}
 
@@ -111,6 +117,7 @@ public:
 		for (const auto& player : this->roster) {
 			total += player->tradeValue;
 		}
+		this->totalTradeValue = total; 
 		return total;
 	}
 	void destroyPlayers() {
@@ -121,3 +128,7 @@ public:
 		roster.shrink_to_fit(); 
 	}
 };
+
+
+
+
